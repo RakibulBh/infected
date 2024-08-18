@@ -8,3 +8,7 @@ status.Value = "Choosing map..."
 wait(2)
 local chosenMap = roundModule.ChooseMap(maps)
 status.Value = "Map chosen: "..chosenMap.Name
+
+roundModule.LoadMap(chosenMap)
+
+roundModule.TeleportPlayers(game.Players:GetPlayers(), chosenMap)
