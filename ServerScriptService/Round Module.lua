@@ -1,6 +1,7 @@
 local status : StringValue = game:GetService("ReplicatedStorage").Status
 local serverStorage = game:GetService("ServerStorage")
 local infectionBarGui = serverStorage:WaitForChild("InfectionBarGUI")
+local infectedCharacter = serverStorage.InfectedCharacter
 
 local module = {}
 
@@ -52,9 +53,32 @@ end
 module.SetupInfectedPlayer = function (infectedPlayer)
 	-- Wait for the character to load if it doesn't exist
 	local character = infectedPlayer.Character or infectedPlayer.CharacterAdded:Wait()
-
-	local humanoid = character:WaitForChild("Humanoid")
+	
+	local infectedCharacterClone = infectedCharacter:Clone()
+	infectedPlayer.Character = infectedCharacterClone
+	infectedCharacterClone.Parent = game.Workspace
+	infectedCharacterClone:SetPrimaryPartCFrame(character:GetPrimaryPartCFrame())
+	character:Destroy()
+	
+	local humanoid = infectedCharacterClone:WaitForChild("Humanoid")
 	humanoid.WalkSpeed = 25
+	
+	local leftFoot = infectedCharacterClone:WaitForChild("LeftFoot")
+	local rightFoot = infectedCharacterClone:WaitForChild("RightFoot")
+
+	-- Create slippery CustomPhysicalProperties
+	-- Adjust these values as needed for desired slipperiness
+	local DENSITY = 0.7  -- Keep density close to normal to maintain weight
+	local FRICTION = 0.01  -- Very low friction for slipperiness
+	local ELASTICITY = 0.5  -- Moderate bounce
+	local FRICTION_WEIGHT = 1
+	local ELASTICITY_WEIGHT = 1
+
+	local slipperyProperties = PhysicalProperties.new(DENSITY, FRICTION, ELASTICITY, FRICTION_WEIGHT, ELASTICITY_WEIGHT)
+
+	-- Apply the slippery properties to both feet
+	leftFoot.CustomPhysicalProperties = slipperyProperties
+	rightFoot.CustomPhysicalProperties = slipperyProperties
 
 	local infection = Instance.new("IntValue")
 	infection.Name = "Infection"
@@ -65,7 +89,7 @@ module.SetupInfectedPlayer = function (infectedPlayer)
 	local infectionBarClone = infectionBarGui:Clone()
 	infectionBarClone:WaitForChild("InfectionBar"):WaitForChild("Player").Value = infectedPlayer
 	humanoid.HealthDisplayDistance = 0
-	infectionBarClone.Parent = character:WaitForChild("Head")
+	infectionBarClone.Parent = infectedCharacterClone:WaitForChild("Head")
 
 	-- You might want to return the infection value for further use
 	return infection
@@ -98,7 +122,8 @@ module.Timer = function (GAME_TIME)
 	end
 end
 
-module.CleanupPlayer = function (player)
+module.CleanupPlayer = function (player: Player)
+	player:LoadCharacter()
 	for _, child in pairs(player:GetChildren()) do
 		if child:IsA("StringValue") or child:IsA("IntValue") then
 			child:Destroy()
