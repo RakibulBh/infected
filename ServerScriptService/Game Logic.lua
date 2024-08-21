@@ -5,7 +5,13 @@ local status = ReplicatedStorage:FindFirstChild("Status")
 local lobby = game.Workspace.Lobby
 
 while true do
-	roundModule.Intermission(15)
+	
+	repeat
+		task.wait(1)
+		status.Value = "Waiting for players..."
+	until #game.Players:GetPlayers() >= 2
+	
+	roundModule.Intermission(5)
 	status.Value = "Choosing map..."
 	task.wait(2)
 	local chosenMap = roundModule.ChooseMap(maps)
@@ -62,8 +68,8 @@ while true do
 	
 	roundModule.SetupInfectedPlayer(infectedPlayer)
 	roundModule.TeleportPlayers({infectedPlayer}, chosenMap)
-	local taskToDo = coroutine.create(roundModule.InfectedPlayersDamage)
-	coroutine.resume(taskToDo, infectedPlayers)
+	local damageInfectedPlayers = coroutine.create(roundModule.InfectedPlayersDamage)
+	coroutine.resume(damageInfectedPlayers, infectedPlayers)
 	
 	local timerEnded = false
 	local timer = coroutine.create(function()
@@ -93,7 +99,16 @@ while true do
 		task.wait()
 	end
 	
-
+	coroutine.close(damageInfectedPlayers)
+	
+	if outcome == "Time's up, players have won" then
+		for _, player in pairs(uninfectedPlayers) do
+			local leaderstats = player:WaitForChild("leaderstats")
+			local wins = leaderstats:FindFirstChild("Wins")
+			wins.Value = wins.Value + 1
+		end
+	end
+	
 	for _, player in pairs(players) do
 		roundModule.CleanupPlayer(player)
 		local character = player.Character or player.CharacterAdded:Wait()
